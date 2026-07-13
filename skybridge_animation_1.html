@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKYBRIDGE Mission Animation — Team Viking — Zone B</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#0f1420; --panel:#161d2e; --border:#2a3550; --border-strong:#3c4a6e;
+  --text-primary:#eef2fb; --text-secondary:#a9b4cc; --text-muted:#6d7893;
+  --navy:#3b6bd1; --teal:#1d9e75; --accent:#e0725a; --scoutB:#7fa8c9; --amber:#c98500;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text-primary);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 20px 40px;}
+header{text-align:center;margin-bottom:16px;}
+header h1{font-size:21px;font-weight:500;margin:0 0 4px;}
+header p{font-size:13px;color:var(--text-secondary);margin:0;}
+.badge-row{display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.badge{font-size:11.5px;padding:3px 11px;border-radius:20px;background:var(--panel);color:var(--text-secondary);border:0.5px solid var(--border);}
+.stage{background:var(--panel);border:0.5px solid var(--border);border-radius:14px;padding:16px 18px 8px;}
+svg{width:100%;height:auto;display:block;}
+
+.phase-strip{display:flex;justify-content:space-between;margin:2px 4px 10px;position:relative;}
+.phase-strip::before{content:"";position:absolute;top:9px;left:14px;right:14px;height:2px;background:var(--border);z-index:0;}
+.phase-step{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9.5px;color:var(--text-muted);z-index:1;flex:1;text-align:center;}
+.phase-step .node{width:11px;height:11px;border-radius:50%;background:var(--border);border:2px solid var(--bg);transition:background .2s;}
+.phase-step.active .node{background:var(--teal);}
+.phase-step.active{color:var(--text-primary);}
+
+.hud{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:12px 0;}
+.hud .card{background:#1d2740;border-radius:8px;padding:9px 12px;border:0.5px solid var(--border);}
+.hud .card .label{font-size:10.5px;color:var(--text-muted);margin-bottom:3px;}
+.hud .card .value{font-size:16px;font-weight:500;}
+.hud .card .value.ok{color:var(--teal);}
+.hud .card .value.warn{color:var(--amber);}
+
+.caption-bar{background:#1d2740;border-left:3px solid var(--teal);border-radius:6px;padding:12px 16px;margin:14px 0;font-size:14px;min-height:22px;}
+.caption-bar b{color:var(--teal);}
+.caption-bar .sub{display:block;font-size:12px;color:var(--text-secondary);margin-top:4px;}
+.controls{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:6px;padding-bottom:10px;}
+button{background:var(--panel);border:0.5px solid var(--border-strong);color:var(--text-primary);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+button:hover{background:var(--border);}
+button:active{transform:scale(0.98);}
+.progress{flex:1;max-width:380px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--teal);width:0%;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--text-secondary);justify-content:center;margin:10px 0 4px;}
+.legend span{display:inline-flex;align-items:center;gap:5px;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+footer{text-align:center;font-size:11.5px;color:var(--text-muted);margin-top:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SKYBRIDGE mission animation</h1>
+    <p>Hybrid tethered-swarm UAV relay network — flood communication restoration</p>
+    <div class="badge-row">
+      <span class="badge">Team Viking</span>
+      <span class="badge">Zone B — Communication Relay</span>
+      <span class="badge">Aerospanza Round 2</span>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="phase-strip" id="phaseStrip"></div>
+    <svg id="scene" viewBox="0 0 900 400"></svg>
+    <div class="legend">
+      <span><span class="dot" style="background:#3b6bd1"></span>Anchor (X8, tethered)</span>
+      <span><span class="dot" style="background:#1d9e75"></span>Scout A (VTOL fixed-wing)</span>
+      <span><span class="dot" style="background:#7fa8c9"></span>Scout B</span>
+      <span><span class="dot" style="background:#e0725a"></span>Survivors / rescue team</span>
+      <span><span class="dot" style="background:#c98500"></span>Ground power / command center</span>
+    </div>
+
+    <div class="hud">
+      <div class="card"><div class="label">Altitude</div><div class="value" id="hudAlt">—</div></div>
+      <div class="card"><div class="label">Coverage</div><div class="value" id="hudCov">—</div></div>
+      <div class="card"><div class="label">Active links</div><div class="value" id="hudLinks">—</div></div>
+      <div class="card"><div class="label">Anchor endurance</div><div class="value ok" id="hudAnchor">24h+ (tether)</div></div>
+      <div class="card"><div class="label">Scout sortie clock</div><div class="value" id="hudScout">—</div></div>
+    </div>
+
+    <div class="caption-bar" id="caption"></div>
+    <div class="controls">
+      <button id="playBtn"><i class="ti ti-player-pause" id="playIcon"></i><span id="playLabel">Pause</span></button>
+      <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+      <span id="timeLabel" style="font-size:12px;color:var(--text-muted);min-width:64px;">T+0.0h</span>
+    </div>
+  </div>
+  <footer>Auto-looping mission sequence — deployment, continuous relay, and Scout rotation handover.</footer>
+</div>
+
+<script>
+const svg = document.getElementById('scene');
+const caption = document.getElementById('caption');
+const progressFill = document.getElementById('progressFill');
+const timeLabel = document.getElementById('timeLabel');
+const phaseStrip = document.getElementById('phaseStrip');
+const hudAlt = document.getElementById('hudAlt');
+const hudCov = document.getElementById('hudCov');
+const hudLinks = document.getElementById('hudLinks');
+const hudScout = document.getElementById('hudScout');
+
+const CAMP_X = 110, CAMP_Y = 340;
+const HQ_X = 40, HQ_Y = 330;
+const ANCHOR_HOVER_Y = 110;
+const SCOUT_HOVER_Y = 155;
+const SCOUT_X = 570;
+const SURVIVOR_X = 770, SURVIVOR_Y = 150;
+const RESCUE_X = 810, RESCUE_Y = 255;
+
+const TOTAL = 22;
+const HOURS_PER_LOOP = 4.5;
+
+const stages = [
+  {end:1.5, icon:'ti-plug', label:'Tether up'},
+  {end:5, icon:'ti-plane-departure', label:'Scout launch'},
+  {end:13.5, icon:'ti-broadcast', label:'Relay live'},
+  {end:16.5, icon:'ti-refresh', label:'Handover'},
+  {end:18, icon:'ti-plane-arrival', label:'Scout A lands'},
+  {end:TOTAL, icon:'ti-repeat', label:'Rotation loop'}
+];
+function buildPhaseStrip(){
+  phaseStrip.innerHTML = stages.map((st,i)=>`
+    <div class="phase-step" data-i="${i}">
+      <div class="node"></div>
+      <span>${st.label}</span>
+    </div>`).join('');
+}
+function updatePhaseStrip(t){
+  let idx = stages.findIndex(s=>t < s.end);
+  if(idx === -1) idx = stages.length-1;
+  document.querySelectorAll('.phase-step').forEach((el,i)=>{
+    el.classList.toggle('active', i<=idx);
+  });
+}
+
+const camY = t => CAMP_Y - Math.min(1, t/1.5) * (CAMP_Y - ANCHOR_HOVER_Y);
+
+function ease(p){ p=Math.max(0,Math.min(1,p)); return p*p*(3-2*p); }
+
+function scoutAY(t){
+  if(t < 1.5) return CAMP_Y;
+  if(t < 5) { const p=(t-1.5)/3.5; return CAMP_Y + (SCOUT_HOVER_Y-CAMP_Y)*ease(p); }
+  if(t < 15) return SCOUT_HOVER_Y + Math.sin(t*1.3)*3;
+  if(t < 18){ const p=(t-15)/3; return SCOUT_HOVER_Y + (CAMP_Y-SCOUT_HOVER_Y)*ease(p); }
+  return CAMP_Y;
+}
+function scoutAX(t){
+  if(t < 1.5) return CAMP_X;
+  if(t < 5){ const p=(t-1.5)/3.5; return CAMP_X + (SCOUT_X-CAMP_X)*ease(p); }
+  if(t < 15) return SCOUT_X;
+  if(t < 18){ const p=(t-15)/3; return SCOUT_X + (CAMP_X-SCOUT_X)*ease(p); }
+  return CAMP_X;
+}
+function scoutBY(t){
+  if(t < 13.5) return CAMP_Y;
+  if(t < 16.5){ const p=(t-13.5)/3; return CAMP_Y + (SCOUT_HOVER_Y-CAMP_Y)*ease(p); }
+  return SCOUT_HOVER_Y + Math.sin(t*1.3+2)*3;
+}
+function scoutBX(t){
+  if(t < 13.5) return CAMP_X;
+  if(t < 16.5){ const p=(t-13.5)/3; return CAMP_X + (SCOUT_X-CAMP_X)*ease(p); }
+  return SCOUT_X;
+}
+
+function relayActive(t){ return t >= 5 && t < TOTAL; }
+
+function packetPos(path, phase, t){
+  const speed = 0.6;
+  let p = ((t*speed + phase) % 1);
+  const [x1,y1,x2,y2] = path;
+  return [x1+(x2-x1)*p, y1+(y2-y1)*p];
+}
+
+function captionFor(t){
+  if(t < 1.5) return ['T+0 to T+0.5h','Anchor UAV tethers to the ground power unit and climbs to 150m operating altitude.'];
+  if(t < 5) return ['T+0.5 to T+1h','Scout A launches on VTOL rotors, transitions to wing-borne cruise, and flies toward the isolated survivor cluster along a pre-planned GIS route.'];
+  if(t < 13.5) return ['Continuous relay','Survivor LoRa SOS/GPS pings and rescue-team LTE traffic flow through Scout A &#8594; Anchor &#8594; command center, geotagged and logged on arrival.'];
+  if(t < 16.5) return ['T+3h45min handover','Scout B launches ~15 minutes before Scout A\'s sortie ends. Both stay airborne briefly so the relay link is never interrupted.'];
+  if(t < 18) return ['Rotation complete','Scout A returns to the relief camp for a battery swap and stands by as the next relief aircraft. Scout B is now on station.'];
+  return ['Ongoing operation','This rotation cycle repeats indefinitely, giving 24/7 coverage for the full duration of the multi-day flood response.'];
+}
+
+function hudFor(t){
+  const alt = t < 1.5 ? Math.round(150*Math.min(1,t/1.5)) : 150;
+  const cov = t < 5 ? Math.round(28*Math.min(1,(t)/5)) : 28;
+  let links = 0;
+  if(relayActive(t)) links = 52;
+  const cycleLen = 3.75;
+  const sortieT = ((t-1.5+cycleLen) % cycleLen);
+  const sortieRemaining = Math.max(0, (4 - sortieT)).toFixed(1);
+  return {alt, cov, links, sortieRemaining};
+}
+
+function render(t){
+  const cy = camY(t);
+  const saX = scoutAX(t), saY = scoutAY(t);
+  const sbX = scoutBX(t), sbY = scoutBY(t);
+  const showSurvivorLink = relayActive(t);
+  const scoutAVisible = t < 18 || t >= TOTAL-0.01;
+  const scoutBOnStation = t >= 16.5;
+  const pulse = (Math.sin(t*3)+1)/2;
+
+  let s = '';
+
+  s += `<rect x="0" y="360" width="900" height="40" fill="#12233a"/>`;
+  s += `<path d="M0,362 Q40,355 80,362 T160,362 T240,362 T320,362 T400,362 T480,362 T560,362 T640,362 T720,362 T800,362 T880,362 L900,362 L900,400 L0,400 Z" fill="#12233a"/>`;
+  s += `<path d="M0,362 Q40,357 80,362 T160,362 T240,362 T320,362 T400,362 T480,362 T560,362 T640,362 T720,362 T800,362 T880,362" fill="none" stroke="#1d3a56" stroke-width="2" opacity="0.7"/>`;
+
+  s += `<rect x="6" y="335" width="70" height="27" rx="3" fill="#1d2740" stroke="#2a3550"/>`;
+  s += `<line x1="16" y1="335" x2="16" y2="318" stroke="#6d7893" stroke-width="2"/>`;
+  s += `<line x1="10" y1="318" x2="22" y2="318" stroke="#c98500" stroke-width="2"/>`;
+  s += `<circle cx="16" cy="322" r="2" fill="#c98500"><animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite"/></circle>`;
+  s += `<rect x="30" y="344" width="18" height="12" rx="1.5" fill="none" stroke="#c98500" stroke-width="1.3"/>`;
+  s += `<text x="40" y="374" text-anchor="middle" font-size="9.5" fill="#a9b4cc">Command center</text>`;
+
+  s += `<rect x="80" y="345" width="60" height="10" rx="2" fill="#1d2740" stroke="#2a3550"/>`;
+  s += `<rect x="86" y="335" width="20" height="10" fill="none" stroke="#c98500" stroke-width="1.3"/>`;
+  s += `<text x="110" y="374" text-anchor="middle" font-size="9.5" fill="#a9b4cc">Ground power unit</text>`;
+
+  s += `<line x1="${CAMP_X}" y1="345" x2="${CAMP_X}" y2="${cy+10}" stroke="#6d7893" stroke-width="2"/>`;
+  s += anchorDrone(CAMP_X, cy, '#3b6bd1', 20);
+  s += `<text x="${CAMP_X}" y="${cy-24}" text-anchor="middle" font-size="11" fill="#a9b4cc">Anchor (X8)</text>`;
+
+  if(cy <= ANCHOR_HOVER_Y+2){
+    s += `<circle cx="${CAMP_X}" cy="${cy}" r="${150+pulse*10}" fill="none" stroke="#3b6bd1" stroke-width="1" opacity="${0.25-pulse*0.15}"/>`;
+    s += `<circle cx="${CAMP_X}" cy="${cy}" r="150" fill="#3b6bd1" opacity="0.07"/>`;
+  }
+
+  if(scoutAVisible){
+    s += scoutDrone(saX, saY, '#1d9e75', 15);
+    s += `<text x="${saX}" y="${saY-19}" text-anchor="middle" font-size="10.5" fill="#a9b4cc">Scout A</text>`;
+    if(saY <= SCOUT_HOVER_Y+2 && saX >= SCOUT_X-2){
+      s += `<circle cx="${saX}" cy="${saY}" r="${120+pulse*8}" fill="none" stroke="#1d9e75" stroke-width="1" opacity="${0.25-pulse*0.15}"/>`;
+      s += `<circle cx="${saX}" cy="${saY}" r="120" fill="#1d9e75" opacity="0.07"/>`;
+    }
+  }
+  if(t >= 13.5){
+    s += scoutDrone(sbX, sbY, '#7fa8c9', 15);
+    s += `<text x="${sbX}" y="${sbY-19}" text-anchor="middle" font-size="10.5" fill="#a9b4cc">Scout B</text>`;
+  }
+
+  s += rooftop(SURVIVOR_X, SURVIVOR_Y);
+  s += `<text x="${SURVIVOR_X}" y="${SURVIVOR_Y-20}" text-anchor="middle" font-size="10.5" fill="#a9b4cc">Survivors</text>`;
+  s += rescueVehicle(RESCUE_X, RESCUE_Y);
+  s += `<text x="${RESCUE_X}" y="${RESCUE_Y-18}" text-anchor="middle" font-size="10.5" fill="#a9b4cc">Rescue team</text>`;
+
+  const activeScoutX = scoutBOnStation ? sbX : saX;
+  const activeScoutY = scoutBOnStation ? sbY : saY;
+
+  if(showSurvivorLink){
+    s += `<line x1="${activeScoutX}" y1="${activeScoutY}" x2="${SURVIVOR_X}" y2="${SURVIVOR_Y}" stroke="#e0725a" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>`;
+    s += `<line x1="${activeScoutX}" y1="${activeScoutY}" x2="${CAMP_X}" y2="${cy}" stroke="#1d9e75" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>`;
+    s += `<line x1="${RESCUE_X}" y1="${RESCUE_Y}" x2="${CAMP_X}" y2="${cy}" stroke="#e0725a" stroke-width="1" stroke-dasharray="4 4" opacity="0.35"/>`;
+    s += `<line x1="${CAMP_X}" y1="${cy}" x2="${HQ_X+40}" y2="${HQ_Y-27}" stroke="#c98500" stroke-width="1" stroke-dasharray="4 4" opacity="0.4"/>`;
+
+    let [px,py] = packetPos([SURVIVOR_X,SURVIVOR_Y,activeScoutX,activeScoutY], 0, t);
+    s += `<circle cx="${px}" cy="${py}" r="3.5" fill="#e0725a"/>`;
+    [px,py] = packetPos([activeScoutX,activeScoutY,CAMP_X,cy], 0.3, t);
+    s += `<circle cx="${px}" cy="${py}" r="3.5" fill="#1d9e75"/>`;
+    [px,py] = packetPos([RESCUE_X,RESCUE_Y,CAMP_X,cy], 0.6, t);
+    s += `<circle cx="${px}" cy="${py}" r="3.5" fill="#e0725a"/>`;
+    [px,py] = packetPos([CAMP_X,cy,HQ_X+40,HQ_Y-27], 0.15, t);
+    s += `<circle cx="${px}" cy="${py}" r="3.5" fill="#c98500"/>`;
+  }
+
+  svg.innerHTML = s;
+
+  const [phaseTitle, phaseDetail] = captionFor(t);
+  caption.innerHTML = `<b>${phaseTitle}:</b> ${phaseDetail}`;
+  progressFill.style.width = (t/TOTAL*100)+'%';
+  const simHours = (t/TOTAL*HOURS_PER_LOOP);
+  timeLabel.textContent = 'T+'+simHours.toFixed(1)+'h';
+
+  const hud = hudFor(t);
+  hudAlt.textContent = hud.alt+' m';
+  hudCov.textContent = hud.cov+' km';
+  hudLinks.className = 'value' + (hud.links>0?' ok':'');
+  hudLinks.textContent = hud.links>0 ? hud.links+'+' : 'standby';
+  hudScout.textContent = t<1.5 ? '—' : hud.sortieRemaining+'h left';
+
+  updatePhaseStrip(t);
+}
+
+function anchorDrone(x,y,color,r){
+  let arms='', rotors='';
+  const angles=[45,135,225,315];
+  angles.forEach(a=>{
+    const rad=a*Math.PI/180;
+    const ax=x+Math.cos(rad)*r, ay=y+Math.sin(rad)*r*0.55;
+    arms+=`<line x1="${x}" y1="${y}" x2="${ax}" y2="${ay}" stroke="${color}" stroke-width="2"/>`;
+    rotors+=`<circle cx="${ax}" cy="${ay}" r="3.6" fill="none" stroke="${color}" stroke-width="1.4"/>`;
+    rotors+=`<circle cx="${ax}" cy="${ay-4}" r="3.6" fill="none" stroke="${color}" stroke-width="1.2" opacity="0.6"/>`;
+  });
+  return `<g>${arms}${rotors}<rect x="${x-5}" y="${y-4}" width="10" height="8" rx="1.5" fill="${color}"/></g>`;
+}
+
+function scoutDrone(x,y,color,r){
+  return `<g>
+    <path d="M ${x-r*1.6} ${y} L ${x-3} ${y-2} L ${x-3} ${y+2} Z" fill="${color}" opacity="0.85"/>
+    <path d="M ${x+r*1.6} ${y} L ${x+3} ${y-2} L ${x+3} ${y+2} Z" fill="${color}" opacity="0.85"/>
+    <path d="M ${x-4} ${y-9} L ${x+9} ${y} L ${x-4} ${y+9} Z" fill="${color}"/>
+  </g>`;
+}
+
+function rooftop(x,y){
+  return `<g>
+    <path d="M ${x-13} ${y+7} L ${x} ${y-6} L ${x+13} ${y+7} Z" fill="none" stroke="#e0725a" stroke-width="2"/>
+    <circle cx="${x}" cy="${y+3}" r="2.4" fill="#e0725a"/>
+  </g>`;
+}
+function rescueVehicle(x,y){
+  return `<g>
+    <rect x="${x-12}" y="${y-4}" width="24" height="10" rx="2" fill="none" stroke="#e0725a" stroke-width="1.6"/>
+    <circle cx="${x-6}" cy="${y+7}" r="3" fill="#e0725a"/>
+    <circle cx="${x+6}" cy="${y+7}" r="3" fill="#e0725a"/>
+  </g>`;
+}
+
+let playing = true, lastTs = null, simT = 0;
+function tick(ts){
+  if(!lastTs) lastTs = ts;
+  const dt = (ts-lastTs)/1000;
+  lastTs = ts;
+  if(playing){
+    simT += dt;
+    if(simT >= TOTAL) simT = 0;
+    render(simT);
+  }
+  requestAnimationFrame(tick);
+}
+
+document.getElementById('playBtn').addEventListener('click', ()=>{
+  playing = !playing;
+  document.getElementById('playIcon').className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  document.getElementById('playLabel').textContent = playing ? 'Pause' : 'Play';
+  lastTs = null;
+});
+
+buildPhaseStrip();
+render(0);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
